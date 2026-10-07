@@ -1,211 +1,154 @@
-# AxioGlobe GDL Validation Engine
+# AxioGlobe Product Intelligence Engine — GDL Output Architecture
 
-> **Status: Pre-build technical design phase**  
-> This repository documents the design of the GDL Validation Engine. No production code exists yet.
+> **Status: architecture / pre-production design**
+>
+> This repository name is historical. Under the unified AxioGlobe architecture, the former “GDL Validation Engine” is **not a standalone product** and GDL/GSM is **not** the master product database.
 
-## What Is the GDL Validation Engine?
+## Correct role in the ecosystem
 
-The GDL Validation Engine converts building product manufacturer data — typically delivered as PDF datasheets, CAD files, and performance certificates — into verified parametric BIM objects (GDL format) for placement inside ArchiCAD.
+The long-term capability is the **AxioGlobe Product Intelligence Engine**.
 
-Every building product manufacturer in the world produces technical documentation. None of it is in a format that an architect can place directly into ArchiCAD. The GDL Engine solves this — automatically, at scale, with AI verification at every step.
+Its purpose is to transform manufacturer and supplier source material into canonical, evidence-backed **Product DNA**, then generate and validate downstream artifacts for the environments that need them.
 
-## The Five-Pass Validation Process
+GDL is the first Archicad artifact-output path.
 
-```
-PASS 1: DOCUMENT INTELLIGENCE (Claude Sonnet)
-  Input:  Manufacturer PDF (datasheet, EPD, fire cert, acoustic cert)
-  Output: Structured data extraction
-          - Product name and code
-          - All dimensions (nominal, tolerance ranges)
-          - Thermal performance (U-value, R-value, lambda)
-          - Fire classification (BS EN 13501, SANS 10177)
-          - Acoustic rating (Rw, Rw+Ctr)
-          - Embodied carbon (kg CO2e/kg from EPD)
-          - Current price and lead time
-          - Manufacturer contact and warranty terms
+AxioGlobe remains one platform with four external surfaces:
 
-PASS 2: GEOMETRY EXTRACTION (Gemini 1.5 Flash)
-  Input:  CAD drawings or PDF dimensioned drawings
-  Output: Parametric geometry definition
-          - Base geometry (L x W x H)
-          - Parametric ranges (min/max dimensions)
-          - Connection points and hotspot positions
-          - 2D symbol for plan view
-          - 3D geometry for ArchiCAD model view
+- Axverse
+- Axio Supply
+- Axio Build
+- PEER
 
-PASS 3: PERFORMANCE VERIFICATION (Claude Sonnet)
-  Input:  Extracted performance data from Pass 1
-  Output: Verification against claimed standards
-          - Thermal: CIBSE Guide A / SANS 10400 XA compliance
-          - Fire: BS EN 13501-1 classification verified
-          - Acoustic: ISO 140 / SANS 10053 compliance
-          - Carbon: GWP aligned with EN 15804 EPD standard
-          - PASS / FAIL / NEEDS_REVIEW status per attribute
+Product Intelligence sits underneath those surfaces as shared infrastructure.
 
-PASS 4: GLOBAL CODE COMPLIANCE (Claude Sonnet)
-  Input:  Product type, performance data, target jurisdictions
-  Output: Jurisdiction-specific compliance status
-          - South Africa: SANS 10400 Part XA/S/T/W
-          - United Kingdom: Part L / Part B / Approved Documents
-          - European Union: EN Eurocodes
-          - United Arab Emirates: UAE Fire and Life Safety Code
-          - Australia: NCC (National Construction Code)
-          - Compliance badge per jurisdiction
+## Canonical product truth
 
-PASS 5: PARAMETRIC RANGE TESTING (Gemini)
-  Input:  GDL object from Pass 2 + compliance data from Pass 3+4
-  Output: Tested parametric object
-          - Object renders correctly at all parametric values
-          - Property sets update correctly on parameter change
-          - BOQ quantities calculate correctly
-          - IFC export valid at all parameter values
-          - PASS: object published to ArchiCAD library
-          - FAIL: object returned to manufacturer with specific feedback
+The canonical record is:
 
-```
+**Product DNA + provenance + evidence + version history + approval history**
 
-## Processing Pipeline
+GDL/GSM, Revit families, IFC and web/API representations are derived artifacts.
 
-```
-Manufacturer                   AxioGlobe GDL Engine              ArchiCAD
-    │                                   │                            │
-    │── Upload PDF + CAD ──────────────>│                            │
-    │                           Pass 1: Claude reads PDF             │
-    │                           Pass 2: Gemini extracts geometry     │
-    │                           Pass 3: Claude verifies performance  │
-    │                           Pass 4: Claude checks 180+ codes     │
-    │                           Pass 5: Gemini tests parametrics     │
-    │                                   │                            │
-    │<── Verification report ───────────│                            │
-    │    (PASS / FAIL / CORRECTIONS)    │                            │
-    │                                   │                            │
-    │                           Publish to GDL Library ────────────>│
-    │                                   │            Object available│
-    │                                   │            in ArchiCAD     │
-    │                                   │            library panel   │
-```
+No downstream format is allowed to silently become the source of truth.
 
-## API Endpoints
+## Authoritative product-intelligence flow
 
-```
-POST /api/v1/gdl/submit
-  Description: Submit product for GDL validation
-  Auth: manufacturer_api_key
-  Body: {
-    product_name: string,
-    product_code: string,
-    manufacturer_id: uuid,
-    documents: [
-      { type: 'datasheet', file: base64, mime: 'application/pdf' },
-      { type: 'cad_drawing', file: base64, mime: 'image/dxf' },
-      { type: 'epd', file: base64, mime: 'application/pdf' },
-      { type: 'fire_certificate', file: base64, mime: 'application/pdf' }
-    ],
-    target_jurisdictions: ['ZA', 'GB', 'AE', 'AU', 'EU'],
-    product_category: 'facade_system' | 'structural_element' | 'mep_component' | ...
-  }
-  Response: { job_id: uuid, estimated_processing_time: '45 minutes' }
+1. Manufacturer / supplier source material
+2. Document intelligence and structured extraction
+3. Canonical Product DNA / evidence graph
+4. Bounded AI enrichment and reasoning
+5. Reusable validated parametric generators
+6. Artifact assembly for the target environment
+7. Deterministic validation and performance testing
+8. Safe self-repair where permitted
+9. Human exception handling where required
+10. Manufacturer approval of product identity and declared data
+11. Signed / versioned artifact publication
+12. Consumption by Axverse, Project Pulse, AutoBid and other AxioGlobe services
+13. Outcome feedback updates trust, confidence and future matching
 
-GET /api/v1/gdl/status/:job_id
-  Description: Check processing status
-  Response: {
-    status: 'processing' | 'review_required' | 'published' | 'rejected',
-    pass_results: { pass1: {...}, pass2: {...}, pass3: {...}, pass4: {...}, pass5: {...} },
-    gdl_object_url: string | null,
-    feedback: string | null
-  }
+## Core rules
 
-GET /api/v1/gdl/library
-  Description: Search published GDL objects
-  Query: category, manufacturer, jurisdiction, performance_min
-  Response: { products: [{...}], total: number }
+- Every material fact retains provenance: source, location, extraction method, confidence and approval history.
+- Missing or conflicting technical data becomes a visible exception.
+- AxioGlobe must not invent missing manufacturer values.
+- AI proposes, extracts and interprets inside bounded tasks.
+- Deterministic systems verify schema, calculations, permissions and release gates.
+- Manufacturer approval confirms commercial product identity and declared data; it is not statutory or professional certification.
+- Generated code and uploaded files are treated as untrusted inputs and must be isolated for build/test.
+- Revisions are versioned and must not silently overwrite artifacts already used in projects.
+
+## Product DNA model
+
+At minimum, the shared model needs to support:
+
+- Product
+- Manufacturer / supplier
+- Source document
+- Evidence
+- Product attribute
+- Geometry / parametric definition
+- Performance data
+- Compliance reference
+- BIM artifact
+- Validation
+- Issue
+- Decision
+- Action
+- Approval
+- Version
+- Publication
+- Project usage
+- Outcome
+
+## GDL artifact path
+
+For Archicad, the bounded flow is:
+
+```text
+Manufacturer evidence
+      ↓
+Document intelligence
+      ↓
+Canonical Product DNA
+      ↓
+Parametric definition
+      ↓
+GDL assembly
+      ↓
+Graphisoft-compatible build
+      ↓
+Deterministic validation
+      ↓
+Exception / repair loop
+      ↓
+Manufacturer approval
+      ↓
+Versioned Living BIM Object
+      ↓
+Axverse / project consumption
 ```
 
-## Database Schema (Core Tables)
+## Validation posture
 
-```sql
--- Manufacturers
-CREATE TABLE manufacturers (
-  id UUID PRIMARY KEY,
-  company_name VARCHAR(255),
-  registration_number VARCHAR(100),
-  country_code CHAR(2),
-  api_key_hash VARCHAR(255),
-  created_at TIMESTAMP
-);
+The current engineering posture is deliberately bounded.
 
--- GDL Products
-CREATE TABLE gdl_products (
-  id UUID PRIMARY KEY,
-  manufacturer_id UUID REFERENCES manufacturers(id),
-  product_name VARCHAR(255),
-  product_code VARCHAR(100),
-  category VARCHAR(100),
-  status VARCHAR(50), -- processing/review/published/rejected
-  gdl_object_url VARCHAR(500),
-  thermal_u_value DECIMAL(6,3),
-  fire_classification VARCHAR(50),
-  acoustic_rw INTEGER,
-  embodied_carbon DECIMAL(10,3),
-  current_price_gbp DECIMAL(10,2),
-  lead_time_weeks INTEGER,
-  published_at TIMESTAMP
-);
+A valid pilot should constrain:
 
--- Jurisdiction Compliance
-CREATE TABLE product_compliance (
-  id UUID PRIMARY KEY,
-  product_id UUID REFERENCES gdl_products(id),
-  jurisdiction_code CHAR(2),
-  compliance_status VARCHAR(20), -- compliant/non_compliant/not_checked
-  applicable_standard VARCHAR(100),
-  clause_reference VARCHAR(100),
-  verified_at TIMESTAMP
-);
+- Archicad version
+- operating system
+- geography
+- one or two low-risk product families
+- accepted source-document types
+- validation rules
+- publication gates
 
--- Specification Events
-CREATE TABLE specification_events (
-  id UUID PRIMARY KEY,
-  product_id UUID REFERENCES gdl_products(id),
-  project_type VARCHAR(100),
-  region VARCHAR(100),
-  specified_at TIMESTAMP,
-  quantity DECIMAL(10,2),
-  unit VARCHAR(20)
-);
-```
+The platform should **not** make a universal “any PDF to perfect GSM automatically” claim.
 
-## Claude and Gemini Integration
+## Architecture direction
 
-The GDL Engine uses two AI models for different tasks based on their respective strengths:
+The intended implementation direction is an event-driven modular monolith with isolated workers rather than premature microservices.
 
-**Claude Sonnet (Anthropic)** — used for:
-- Reading and interpreting technical PDF documents
-- Generating GDL scripting code from extracted specifications
-- Interpreting building code clauses and applying them to specific products
-- Writing verification reports in plain language for manufacturers
+Shared platform infrastructure should provide:
 
-**Gemini 1.5 Flash (Google)** — used for:
-- Visual interpretation of dimensioned drawings
-- Geometric extraction from CAD diagrams
-- Parametric range testing at scale
-- Multi-document correlation across multiple PDFs for one product
+- PostgreSQL canonical data
+- durable jobs / execution state
+- evidence and audit history
+- permissions
+- versioned contracts
+- isolated artifact-generation workers
+- deterministic validators
+- publication / rollback controls
 
-## Why This Has Not Been Built Before
+## Relationship to Axverse
 
-The GDL Validation Engine requires three capabilities that became available simultaneously only in 2024-2025:
+Axverse does not own product truth.
 
-1. **Large context window models** (Claude Sonnet, Gemini 1.5) capable of reading a 40-page technical datasheet in one pass
-2. **Code generation quality** sufficient to produce valid GDL scripting from a natural language specification
-3. **Vision capability** sufficient to interpret a dimensioned engineering drawing and extract parametric geometry
+Axverse requests and consumes product intelligence from AxioGlobe Core. When Archicad needs a BIM object, the Product Intelligence Engine produces or retrieves the appropriate validated GDL artifact for that Product DNA version.
 
-All three of these capabilities were below the required threshold before 2024. They are above the threshold now. The GDL Engine is buildable today in a way it was not two years ago.
+## Repository scope
 
-## Company
-
-**AxioGlobe (PTY) Ltd** — Registration: 2026/437531/07  
-Polokwane, Limpopo, South Africa  
-axioglobe.co.za · info@axioglobe.co.za
+This repository is a **public architecture reference** for Product Intelligence and the GDL artifact path. Production source code, secrets, customer data and proprietary implementation details must remain in controlled private repositories.
 
 ---
-*Pre-build technical design. No production code yet.*
+AxioGlobe (Pty) Ltd · South Africa · https://axioglobe.co.za
